@@ -3,3 +3,7 @@ run.sh
 run_rel.sh
 
 /Cargo.lock
+/.idea/.gitignore
+/.idea/modules.xml
+/.idea/sharepoint_file_uploader.iml
+/.idea/vcs.xml
