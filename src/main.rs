@@ -168,7 +168,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let account = String::from("nickdevstorage002");
     let container = String::from("datas");
-    let blob_name = String::from("test4.txt");
+    let blob_name = String::from("test5.txt");
 
     /////
     let credential = Arc::new(DefaultAzureCredential::default());
