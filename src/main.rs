@@ -212,6 +212,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let uuid = Uuid::new_v4();
     let uuid = uuid.to_string();
 
+    //delete file if exists
+
     //create new file
     transfer_data_to_spo(&spo_save_endpoint,
                          &digest,
