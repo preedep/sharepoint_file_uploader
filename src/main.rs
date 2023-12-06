@@ -5,8 +5,9 @@ use azure_core::auth::TokenCredential;
 use azure_identity::DefaultAzureCredential;
 use azure_storage::prelude::*;
 use azure_storage_blobs::prelude::*;
+use console::Style;
 use futures::StreamExt;
-use log::debug;
+use log::{debug, info};
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,29 @@ mod spo_model;
 
 const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 100MB
 
+enum ProcessStatus {
+    Start,
+    Continue,
+    Finish,
+}
+
+fn show_status(status: ProcessStatus, message: &String) {
+    let cyan = Style::new().cyan();
+
+    match status {
+        ProcessStatus::Start => {
+            info!("Start[{}]", cyan.apply_to(message));
+        }
+        ProcessStatus::Continue => {
+            info!("Continue[{}]", cyan.apply_to(message));
+        }
+        ProcessStatus::Finish => {
+            info!("Finish[{}]", cyan.apply_to(message));
+        }
+    }
+}
+
+type ShowStatusFn = fn(status: ProcessStatus, message: &String);
 
 async fn get_spo_token(
     tenant_id: &String,
@@ -68,12 +92,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let container = String::from("datas");
     let blob_name = String::from("test5.txt");
 
-    /////
+
+    do_upload_file_to_spo(&tenant_id,
+                          &client_id,
+                          &client_secret,
+                          &share_point_domain,
+                          &account,
+                          &container,
+                          &blob_name,
+                          show_status,
+    ).await?;
+    Ok(())
+}
+
+async fn do_upload_file_to_spo(tenant_id: &String,
+                               client_id: &String,
+                               client_secret: &String,
+                               share_point_domain: &String,
+                               account: &String,
+                               container: &String,
+                               blob_name: &String,
+                               callback: ShowStatusFn) -> Result<(), Box<dyn Error>> {
+/////
     let credential = Arc::new(DefaultAzureCredential::default());
     let storage_credentials = StorageCredentials::token_credential(credential);
 
     let blob_client =
-        ClientBuilder::new(account, storage_credentials).blob_client(&container, &blob_name);
+        ClientBuilder::new(account, storage_credentials).blob_client(container, blob_name);
     //blob_client.put_block_blob("hello world").content_type("text/plain").await?;
 
 
@@ -94,7 +139,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //Create new file endpoint
     let mut endpoint = SPOEndpoint::new(&share_point_domain, &String::from("MVP"))
         .set_path(&String::from("/sites/MVP/Shared%20Documents"))
-        .set_file_name(&blob_name);
+        .set_file_name(blob_name);
 
 
     //Create digest endpoint
@@ -134,6 +179,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 //upload for previous chunk
                 if !has_first_chunk {
                     debug!("Upload First Chunk");
+                    callback(ProcessStatus::Start, &String::from("Start"));
+
                     let end_point_url = endpoint.set_uuid(&uuid).to_spo_start_upload_endpoint();
                     debug!("start upload end point url: {:?}", end_point_url);
                     let res = transfer_data_to_spo(&end_point_url,
@@ -158,6 +205,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     //has first chunk already
                     let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_start_continue_endpoint();
+                    callback(ProcessStatus::Continue, &String::from("Continue"));
                     debug!("continue upload end point url: {:?}", end_point_url);
                     let res = transfer_data_to_spo(&end_point_url,
                                                    &digest,
@@ -185,6 +233,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         if !has_first_chunk {
             //simple upload
             //small file
+            callback(ProcessStatus::Start, &String::from("Upload Start"));
             debug!("Upload First Chunk");
             let end_point_url = endpoint.set_uuid(&uuid).to_spo_one_time_save_endpoint();
             debug!("start upload end point url: {:?}", end_point_url);
@@ -192,8 +241,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                  &digest,
                                  &spo_access_token,
                                  &String::from_utf8(result.clone()).unwrap()).await?;
+            callback(ProcessStatus::Finish, &String::from("Upload Finish"));
         } else {
             debug!("Upload finish Chunk");
+            callback(ProcessStatus::Finish, &String::from("Upload Finish"));
             let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_one_time_save_endpoint();
             debug!("finish upload end point url: {:?}", end_point_url);
             transfer_data_to_spo(&end_point_url,
