@@ -168,7 +168,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let account = String::from("nickdevstorage002");
     let container = String::from("datas");
-    let blob_name = String::from("test4.txt");
+    let blob_name = String::from("test5.txt");
 
     /////
     let credential = Arc::new(DefaultAzureCredential::default());
@@ -211,6 +211,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("digest: {:#?}", digest);
     let uuid = Uuid::new_v4();
     let uuid = uuid.to_string();
+
+    //delete file if exists
 
     //create new file
     transfer_data_to_spo(&spo_save_endpoint,
