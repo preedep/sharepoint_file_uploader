@@ -12,115 +12,13 @@ use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::spo_model::{SPOContextInfoResponse, SPOErrorResponse};
+use crate::spo_model::{SPOContextInfoResponse, SPOEndpoint, SPOErrorResponse, SPOTokenResponse};
 
 mod entra_id_model;
 mod spo_model;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SPOTokenResponse {
-    #[serde(rename = "token_type")]
-    pub token_type: Option<String>,
-    #[serde(rename = "expires_in")]
-    pub expires_in: Option<String>,
-    #[serde(rename = "not_before")]
-    pub not_before: Option<String>,
-    #[serde(rename = "expires_on")]
-    pub expires_on: Option<String>,
-    pub resource: Option<String>,
-    #[serde(rename = "access_token")]
-    pub access_token: Option<String>,
-}
-
 const MAX_CHUNK_SIZE: usize = 100 * 1024 * 1024; // 100MB
 
-fn get_spo_save_endpoint(
-    share_point_domain: &String,
-    share_point_site: &String,
-    path: &String,
-    file_name: &String,
-) -> String {
-    //
-    //   https://nickdev001.sharepoint.com/sites/MVP/_api/web/GetFileByServerRelativeUrl('/sites/MVP/Shared%20Documents/@{linkedService().SPOFileName}')/$value
-    //   http://test.sharepoint.com/sites/testsite/_api/web/GetFolderByServerRelativeUrl('/Library Name/Folder Name')/Files/add(url='a.txt',overwrite=true)
-    //
-    let url = format!(
-        r#"https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api/web/GetFolderByServerRelativeUrl('{path}')/Files/add(url='{file_name}',overwrite=true)"#,
-        share_point_domain = share_point_domain,
-        share_point_site = share_point_site,
-        path = path,
-        file_name = file_name
-    );
-    url
-}
-
-fn get_spo_save_endpoint_start_upload(
-    share_point_domain: &String,
-    share_point_site: &String,
-    path: &String,
-    file_name: &String,
-    uuid: &String,
-) -> String {
-    let url = format!(
-        r#"https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api/web/GetFileByServerRelativeUrl('{path}/{file_name}')/StartUpload(uploadId='{uuid}')"#,
-        share_point_domain = share_point_domain,
-        share_point_site = share_point_site,
-        path = path,
-        file_name = file_name,
-        uuid = uuid
-    );
-    url
-}
-
-fn get_spo_save_endpoint_continue_upload(
-    share_point_domain: &String,
-    share_point_site: &String,
-    path: &String,
-    file_name: &String,
-    uuid: &String,
-    offset: &u64,
-) -> String {
-    let url = format!(
-        r#"https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api/web/GetFileByServerRelativeUrl('{path}/{file_name}')/ContinueUpload(uploadId='{uuid}',fileOffset={offset})"#,
-        share_point_domain = share_point_domain,
-        share_point_site = share_point_site,
-        path = path,
-        file_name = file_name,
-        uuid = uuid,
-        offset = offset
-    );
-    url
-}
-
-fn get_spo_save_endpoint_finish_upload(
-    share_point_domain: &String,
-    share_point_site: &String,
-    path: &String,
-    file_name: &String,
-    uuid: &String,
-    offset: &u64,
-) -> String {
-    let url = format!(
-        r#"https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api/web/GetFileByServerRelativeUrl('{path}/{file_name}')/FinishUpload(uploadId='{uuid}',fileOffset={offset})"#,
-        share_point_domain = share_point_domain,
-        share_point_site = share_point_site,
-        path = path,
-        file_name = file_name,
-        uuid = uuid,
-        offset = offset
-    );
-    url
-}
-
-fn get_spo_digest_endpoint(share_point_domain: &String, share_point_site: &String) -> String {
-    let url = format!(
-        "https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api/contextinfo",
-        share_point_domain = share_point_domain,
-        share_point_site = share_point_site
-    );
-    url
-}
 
 async fn get_spo_token(
     tenant_id: &String,
@@ -194,16 +92,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("spo access token: {:?}", spo_access_token);
 
     //Create new file endpoint
-    let spo_save_endpoint = get_spo_save_endpoint(
-        &share_point_domain,
-        &String::from("MVP"),
-        &String::from("/sites/MVP/Shared%20Documents"),
-        &blob_name,
-    );
-    debug!("spo_save_endpoint: {:?}", spo_save_endpoint);
+    let mut endpoint = SPOEndpoint::new(&share_point_domain, &String::from("MVP"))
+        .set_path(&String::from("/sites/MVP/Shared%20Documents"))
+        .set_file_name(&blob_name);
+
 
     //Create digest endpoint
-    let spo_digest_endpoint = get_spo_digest_endpoint(&share_point_domain, &String::from("MVP"));
+    let spo_digest_endpoint = endpoint.to_spo_digest_url();
+    //get_spo_digest_endpoint(&share_point_domain, &String::from("MVP"));
     debug!("spo_digest_endpoint: {:?}", spo_digest_endpoint);
 
     //Get Digest Value
@@ -215,7 +111,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //delete file if exists
 
     //create new file
-    transfer_data_to_spo(&spo_save_endpoint,
+    transfer_data_to_spo(&endpoint.to_spo_one_time_save_endpoint(),
                          &digest,
                          &spo_access_token,
                          &String::from("")).await?;
@@ -238,12 +134,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 //upload for previous chunk
                 if !has_first_chunk {
                     debug!("Upload First Chunk");
-                    let end_point_url = get_spo_save_endpoint_start_upload(
-                        &share_point_domain,
-                        &String::from("MVP"),
-                        &String::from("/sites/MVP/Shared%20Documents"),
-                        &blob_name,
-                        &uuid);
+                    let end_point_url = endpoint.set_uuid(&uuid).to_spo_start_upload_endpoint();
                     debug!("start upload end point url: {:?}", end_point_url);
                     let res = transfer_data_to_spo(&end_point_url,
                                                    &digest,
@@ -266,13 +157,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     }
                 } else {
                     //has first chunk already
-                    let end_point_url = get_spo_save_endpoint_continue_upload(
-                        &share_point_domain,
-                        &String::from("MVP"),
-                        &String::from("/sites/MVP/Shared%20Documents"),
-                        &blob_name,
-                        &uuid,
-                        &offset);
+                    let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_start_continue_endpoint();
                     debug!("continue upload end point url: {:?}", end_point_url);
                     let res = transfer_data_to_spo(&end_point_url,
                                                    &digest,
@@ -301,11 +186,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             //simple upload
             //small file
             debug!("Upload First Chunk");
-            let end_point_url = get_spo_save_endpoint(
-                &share_point_domain,
-                &String::from("MVP"),
-                &String::from("/sites/MVP/Shared%20Documents"),
-                &blob_name);
+            let end_point_url = endpoint.set_uuid(&uuid).to_spo_one_time_save_endpoint();
             debug!("start upload end point url: {:?}", end_point_url);
             transfer_data_to_spo(&end_point_url,
                                  &digest,
@@ -313,13 +194,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                  &String::from_utf8(result.clone()).unwrap()).await?;
         } else {
             debug!("Upload finish Chunk");
-            let end_point_url = get_spo_save_endpoint_finish_upload(
-                &share_point_domain,
-                &String::from("MVP"),
-                &String::from("/sites/MVP/Shared%20Documents"),
-                &blob_name,
-                &uuid,
-                &offset);
+            let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_one_time_save_endpoint();
             debug!("finish upload end point url: {:?}", end_point_url);
             transfer_data_to_spo(&end_point_url,
                                  &digest,
@@ -336,6 +211,8 @@ async fn transfer_data_to_spo(
     spo_access_token: &String,
     text: &String,
 ) -> Result<(), reqwest::Error> {
+    debug!("spo_save_endpoint: {:?}", spo_save_endpoint);
+
     let mut headers = HeaderMap::new();
     headers.append(
         "Authorization",
@@ -383,6 +260,8 @@ async fn get_spo_digest_value(
     spo_digest_endpoint: &String,
     spo_access_token: &String,
 ) -> Result<SPOContextInfoResponse, reqwest::Error> {
+    debug!("spo_digest_endpoint: {:?}", spo_digest_endpoint);
+
     let mut headers = HeaderMap::new();
     headers.append(
         "Authorization",
