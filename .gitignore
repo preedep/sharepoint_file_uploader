@@ -7,3 +7,4 @@ run_rel.sh
 /.idea/modules.xml
 /.idea/sharepoint_file_uploader.iml
 /.idea/vcs.xml
+/build_linux.sh
