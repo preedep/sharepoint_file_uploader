@@ -17,7 +17,7 @@ use crate::spo_model::{SPOContextInfoResponse, SPOEndpoint, SPOErrorResponse, SP
 mod entra_id_model;
 mod spo_model;
 
-const MAX_CHUNK_SIZE: usize = 100 * 1024 * 1024; // 100MB
+const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 100MB
 
 
 async fn get_spo_token(
