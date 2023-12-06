@@ -39,13 +39,14 @@ impl SPOEndpoint {
         self.clone()
     }
     pub fn to_spo_web_url(&self) -> String {
-        format!("https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api",
-                share_point_domain = self.share_point_domain,
-                share_point_site = self.share_point_site)
+        format!(
+            "https://{share_point_domain}.sharepoint.com/sites/{share_point_site}/_api",
+            share_point_domain = self.share_point_domain,
+            share_point_site = self.share_point_site
+        )
     }
     pub fn to_spo_digest_url(&self) -> String {
-        format!("{web_url}/ContextInfo",
-                web_url = self.to_spo_web_url())
+        format!("{web_url}/ContextInfo", web_url = self.to_spo_web_url())
     }
     pub fn to_spo_one_time_save_endpoint(&self) -> String {
         let url = format!("{web_url}/web/GetFolderByServerRelativeUrl('{path}')/Files/add(url='{file_name}',overwrite=true)",
@@ -85,7 +86,6 @@ impl SPOEndpoint {
     }
 }
 
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SPOErrorResponse {
@@ -105,7 +105,6 @@ pub struct Message {
     pub lang: String,
     pub value: String,
 }
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -161,7 +160,6 @@ pub struct Metadata2 {
     pub type_field: String,
 }
 
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SPOTokenResponse {
@@ -177,4 +175,3 @@ pub struct SPOTokenResponse {
     #[serde(rename = "access_token")]
     pub access_token: Option<String>,
 }
-

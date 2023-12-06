@@ -96,32 +96,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let container = String::from("datas");
     let blob_name = String::from("test5.txt");
 
-
     let sp = SpinnerBuilder::new("Uploading....".into()).start();
 
-    do_upload_file_to_spo(&tenant_id,
-                          &client_id,
-                          &client_secret,
-                          &share_point_domain,
-                          &account,
-                          &container,
-                          &blob_name,
-                          show_status,
-                          &sp,
-    ).await?;
+    do_upload_file_to_spo(
+        &tenant_id,
+        &client_id,
+        &client_secret,
+        &share_point_domain,
+        &account,
+        &container,
+        &blob_name,
+        show_status,
+        &sp,
+    )
+    .await?;
     Ok(())
 }
 
-async fn do_upload_file_to_spo(tenant_id: &String,
-                               client_id: &String,
-                               client_secret: &String,
-                               share_point_domain: &String,
-                               account: &String,
-                               container: &String,
-                               blob_name: &String,
-                               callback: ShowStatusFn,
-                               spinner: &SpinnerHandle) -> Result<(), Box<dyn Error>> {
-/////
+async fn do_upload_file_to_spo(
+    tenant_id: &String,
+    client_id: &String,
+    client_secret: &String,
+    share_point_domain: &String,
+    account: &String,
+    container: &String,
+    blob_name: &String,
+    callback: ShowStatusFn,
+    spinner: &SpinnerHandle,
+) -> Result<(), Box<dyn Error>> {
+    /////
     let credential = Arc::new(DefaultAzureCredential::default());
     let storage_credentials = StorageCredentials::token_credential(credential);
 
@@ -129,13 +132,11 @@ async fn do_upload_file_to_spo(tenant_id: &String,
         ClientBuilder::new(account, storage_credentials).blob_client(container, blob_name);
     //blob_client.put_block_blob("hello world").content_type("text/plain").await?;
 
-
     let mut result: Vec<u8> = vec![];
     // The stream is composed of individual calls to the get blob endpoint
     let mut chunk_buffer_size: u64 = 0;
     let mut offset: u64 = 0;
     let mut has_first_chunk = false;
-
 
     //Get SPO Access Token
     let spo_token =
@@ -149,7 +150,6 @@ async fn do_upload_file_to_spo(tenant_id: &String,
         .set_path(&String::from("/sites/MVP/Shared%20Documents"))
         .set_file_name(blob_name);
 
-
     //Create digest endpoint
     let spo_digest_endpoint = endpoint.to_spo_digest_url();
     //get_spo_digest_endpoint(&share_point_domain, &String::from("MVP"));
@@ -162,11 +162,13 @@ async fn do_upload_file_to_spo(tenant_id: &String,
     //delete file if exists
 
     //create new file
-    transfer_data_to_spo(&endpoint.to_spo_one_time_save_endpoint(),
-                         &digest,
-                         &spo_access_token,
-                         &String::from("")).await?;
-
+    transfer_data_to_spo(
+        &endpoint.to_spo_one_time_save_endpoint(),
+        &digest,
+        &spo_access_token,
+        &String::from(""),
+    )
+    .await?;
 
     let mut stream = blob_client.get().into_stream();
     while let Some(value) = stream.next().await {
@@ -186,17 +188,18 @@ async fn do_upload_file_to_spo(tenant_id: &String,
                 //upload for previous chunk
                 if !has_first_chunk {
                     debug!("Upload First Chunk");
-                    callback(ProcessStatus::Start,
-                             spinner,
-                             &String::from("Upload Start"));
+                    callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
 
                     let end_point_url = endpoint.set_uuid(&uuid).to_spo_start_upload_endpoint();
                     debug!("start upload end point url: {:?}", end_point_url);
 
-                    let res = transfer_data_to_spo(&end_point_url,
-                                                   &digest,
-                                                   &spo_access_token,
-                                                   &String::from_utf8(result.clone()).unwrap()).await;
+                    let res = transfer_data_to_spo(
+                        &end_point_url,
+                        &digest,
+                        &spo_access_token,
+                        &String::from_utf8(result.clone()).unwrap(),
+                    )
+                    .await;
                     match res {
                         Ok(_) => {
                             has_first_chunk = true;
@@ -214,16 +217,24 @@ async fn do_upload_file_to_spo(tenant_id: &String,
                     }
                 } else {
                     //has first chunk already
-                    let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_start_continue_endpoint();
-                    callback(ProcessStatus::Continue,
-                             &spinner,
-                             &String::from("Upload Continue"));
+                    let end_point_url = endpoint
+                        .set_uuid(&uuid)
+                        .set_offset(&offset)
+                        .to_spo_start_continue_endpoint();
+                    callback(
+                        ProcessStatus::Continue,
+                        &spinner,
+                        &String::from("Upload Continue"),
+                    );
                     debug!("continue upload end point url: {:?}", end_point_url);
 
-                    let res = transfer_data_to_spo(&end_point_url,
-                                                   &digest,
-                                                   &spo_access_token,
-                                                   &String::from_utf8(result.clone()).unwrap()).await;
+                    let res = transfer_data_to_spo(
+                        &end_point_url,
+                        &digest,
+                        &spo_access_token,
+                        &String::from_utf8(result.clone()).unwrap(),
+                    )
+                    .await;
                     match res {
                         Ok(_) => {
                             debug!("Upload Chunk Success");
@@ -246,30 +257,45 @@ async fn do_upload_file_to_spo(tenant_id: &String,
         if !has_first_chunk {
             //simple upload
             //small file
-            callback(ProcessStatus::Start,
-                     &spinner,
-                     &String::from("Upload Start"));
+            callback(
+                ProcessStatus::Start,
+                &spinner,
+                &String::from("Upload Start"),
+            );
             debug!("Upload First Chunk");
             let end_point_url = endpoint.set_uuid(&uuid).to_spo_one_time_save_endpoint();
             debug!("start upload end point url: {:?}", end_point_url);
-            transfer_data_to_spo(&end_point_url,
-                                 &digest,
-                                 &spo_access_token,
-                                 &String::from_utf8(result.clone()).unwrap()).await?;
-            callback(ProcessStatus::Finish,
-                     &spinner,
-                     &String::from("Upload Finish"));
+            transfer_data_to_spo(
+                &end_point_url,
+                &digest,
+                &spo_access_token,
+                &String::from_utf8(result.clone()).unwrap(),
+            )
+            .await?;
+            callback(
+                ProcessStatus::Finish,
+                &spinner,
+                &String::from("Upload Finish"),
+            );
         } else {
             debug!("Upload finish Chunk");
-            callback(ProcessStatus::Finish,
-                     &spinner,
-                     &String::from("Upload Finish"));
-            let end_point_url = endpoint.set_uuid(&uuid).set_offset(&offset).to_spo_one_time_save_endpoint();
+            callback(
+                ProcessStatus::Finish,
+                &spinner,
+                &String::from("Upload Finish"),
+            );
+            let end_point_url = endpoint
+                .set_uuid(&uuid)
+                .set_offset(&offset)
+                .to_spo_one_time_save_endpoint();
             debug!("finish upload end point url: {:?}", end_point_url);
-            transfer_data_to_spo(&end_point_url,
-                                 &digest,
-                                 &spo_access_token,
-                                 &String::from_utf8(result.clone()).unwrap()).await?;
+            transfer_data_to_spo(
+                &end_point_url,
+                &digest,
+                &spo_access_token,
+                &String::from_utf8(result.clone()).unwrap(),
+            )
+            .await?;
         }
     }
     Ok(())
