@@ -5,7 +5,7 @@ use azure_identity::DefaultAzureCredential;
 use azure_storage::StorageCredentials;
 use azure_storage_blobs::prelude::ClientBuilder;
 use futures::StreamExt;
-use log::debug;
+use log::{debug, info};
 use oauth2::http::HeaderMap;
 use reqwest::Client;
 use spinner::SpinnerHandle;
@@ -138,11 +138,11 @@ pub async fn do_upload_file_to_spo(
                 //upload for previous chunk
                 if !has_first_chunk {
                     debug!("Upload First Chunk");
+                    //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
                     callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
 
                     let end_point_url = endpoint.set_uuid(&uuid).to_spo_start_upload_endpoint();
                     //debug!("start upload end point url: {:?}", end_point_url);
-
                     let res = transfer_data_to_spo(
                         &end_point_url,
                         &digest,
@@ -167,6 +167,7 @@ pub async fn do_upload_file_to_spo(
                     }
                 } else {
                     //has first chunk already
+                    //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
                     let end_point_url = endpoint
                         .set_uuid(&uuid)
                         .set_offset(&offset)
@@ -228,8 +229,10 @@ pub async fn do_upload_file_to_spo(
                 &String::from("Upload Finish"),
             );
 
+
         } else {
             debug!("Upload finish Chunk");
+            //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
             callback(
                 ProcessStatus::Finish,
                 &spinner,
