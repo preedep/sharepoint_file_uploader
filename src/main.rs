@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
 use azure_identity::DefaultAzureCredential;
 use azure_storage::StorageCredentials;
@@ -16,16 +16,13 @@ pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 100MB
 
 mod spo;
 
-
 pub enum ProcessStatus {
     Start,
     Continue,
     Finish,
 }
 
-
 pub type ShowStatusFn = fn(status: ProcessStatus, spinner: &SpinnerHandle, message: &String);
-
 
 fn show_status(status: ProcessStatus, spinner: &SpinnerHandle, message: &String) {
     let cyan = Style::new().cyan().bold();
@@ -45,7 +42,6 @@ fn show_status(status: ProcessStatus, spinner: &SpinnerHandle, message: &String)
         }
     }
 }
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -74,8 +70,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         show_status,
         &sp,
     )
-        .await?;
-
+    .await?;
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
@@ -100,19 +95,14 @@ async fn do_upload_file_to_spo(
     let blob_client =
         ClientBuilder::new(account, storage_credentials).blob_client(container, blob_name);
 
-
     let mut result: Vec<u8> = vec![];
     // The stream is composed of individual calls to the get blob endpoint
     let mut chunk_buffer_size: u64 = 0;
     let mut offset: u64 = 0;
     let mut has_first_chunk = false;
 
-    let mut spo_engine = SPOEngine::new(
-        &tenant_id,
-        &client_id,
-        &client_secret,
-        &share_point_domain,
-    );
+    let mut spo_engine =
+        SPOEngine::new(&tenant_id, &client_id, &client_secret, &share_point_domain);
 
     let mut stream = blob_client.get().into_stream();
     while let Some(value) = stream.next().await {
@@ -135,12 +125,14 @@ async fn do_upload_file_to_spo(
                     //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
                     callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
 
-                    let r = spo_engine.upload_start(
-                        &String::from("MVP"),
-                        &String::from("/sites/MVP/Shared Documents"),
-                        &String::from(blob_name),
-                        result.as_slice(),
-                    ).await;
+                    let r = spo_engine
+                        .upload_start(
+                            &String::from("MVP"),
+                            &String::from("/sites/MVP/Shared Documents"),
+                            &String::from(blob_name),
+                            result.as_slice(),
+                        )
+                        .await;
                     match r {
                         Ok(_) => {
                             debug!("Upload Chunk Success");
@@ -165,10 +157,7 @@ async fn do_upload_file_to_spo(
                         &String::from("Upload Continue"),
                     );
 
-                    let r = spo_engine.upload_continue(
-                        result.as_slice(),
-                        &offset,
-                    ).await;
+                    let r = spo_engine.upload_continue(result.as_slice(), &offset).await;
                     match r {
                         Ok(_) => {
                             //debug!("continue upload end point url: {:?}", end_point_url);
@@ -198,12 +187,14 @@ async fn do_upload_file_to_spo(
             );
             debug!("Upload First Chunk");
 
-            let r = spo_engine.upload_one_time(
-                &String::from("MVP"),
-                &String::from("/sites/MVP/Shared Documents"),
-                &String::from(blob_name),
-                result.as_slice(),
-            ).await;
+            let r = spo_engine
+                .upload_one_time(
+                    &String::from("MVP"),
+                    &String::from("/sites/MVP/Shared Documents"),
+                    &String::from(blob_name),
+                    result.as_slice(),
+                )
+                .await;
 
             match r {
                 Ok(_) => {
@@ -228,10 +219,7 @@ async fn do_upload_file_to_spo(
                 &spinner,
                 &String::from("Upload Finish"),
             );
-            let r = spo_engine.upload_finish(
-                result.as_slice(),
-                &offset,
-            ).await;
+            let r = spo_engine.upload_finish(result.as_slice(), &offset).await;
             match r {
                 Ok(_) => {
                     debug!("Upload Chunk Success");
