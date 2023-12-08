@@ -13,6 +13,7 @@ use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::spo::spo_engine::SPOEngine;
 
+
 pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
 mod spo;
@@ -73,17 +74,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-
+    // Common parameters for uses authentication for Storage Account , Share Point Online
+    // Client Secret got from App Registration in Azure Active Directory
     let tenant_id = std::env::var("AZURE_TENANT_ID").unwrap();
     let client_id = std::env::var("AZURE_CLIENT_ID").unwrap();
     let client_secret = std::env::var("AZURE_CLIENT_SECRET").unwrap();
 
-
+    // Parameters for blob storage
     let account = cli.storage_account;
     let container = cli.container_name;
     let blob_name = cli.blob_name;
 
-
+    // Parameters for share point online
     let share_point_domain = cli.spo_domain;
     let share_point_site = cli.spo_site;
     let share_point_path = cli.spo_path;
