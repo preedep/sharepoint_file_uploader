@@ -37,14 +37,15 @@ pub struct SPOEngine {
     uuid: Option<String>,
     token: Option<SPOTokenResponse>,
     context_info: Option<SPOContextInfoResponse>,
-
 }
 
 impl SPOEngine {
-    pub fn new(tenant_id: &String,
-               client_id: &String,
-               client_secret: &String,
-               share_point_domain: &String) -> SPOEngine {
+    pub fn new(
+        tenant_id: &String,
+        client_id: &String,
+        client_secret: &String,
+        share_point_domain: &String,
+    ) -> SPOEngine {
         SPOEngine {
             tenant_id: tenant_id.to_owned(),
             client_id: client_id.to_owned(),
@@ -56,21 +57,30 @@ impl SPOEngine {
             context_info: None,
         }
     }
-    pub async fn upload_one_time(&mut self,
-                                 site: &String,
-                                 path: &String,
-                                 file_name: &String,
-                                 data: &[u8]) -> Result<(), SPOError> {
-        let mut end_point = self.end_point.set_site(site)
+    //
+    //  Upload One Time , Upload one time to Share point online
+    //
+    pub async fn upload_one_time(
+        &mut self,
+        site: &String,
+        path: &String,
+        file_name: &String,
+        data: &[u8],
+    ) -> Result<(), SPOError> {
+        let mut end_point = self
+            .end_point
+            .set_site(site)
             .set_path(path)
             .set_file_name(file_name);
         self.end_point = end_point.clone();
 
-        let token =
-            get_spo_token(&self.tenant_id,
-                          &self.client_id,
-                          &self.client_secret,
-                          &self.share_point_domain).await;
+        let token = get_spo_token(
+            &self.tenant_id,
+            &self.client_id,
+            &self.client_secret,
+            &self.share_point_domain,
+        )
+            .await;
         match token {
             Ok(t) => {
                 debug!("token: {:#?}", t);
@@ -83,7 +93,8 @@ impl SPOEngine {
         let context_info = get_spo_digest_value(
             &self.end_point.to_spo_digest_url(),
             &self.token.clone().unwrap().access_token.unwrap(),
-        ).await;
+        )
+            .await;
         match context_info {
             Ok(d) => {
                 debug!("context_info: {:#?}", d);
@@ -98,23 +109,30 @@ impl SPOEngine {
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
-        ).await.map_err(|e| {
-            SPOError::new(&format!("to_file_one_time_upload_endpoint error: {:#?}", e))
-        })
+        )
+            .await
+            .map_err(|e| SPOError::new(&format!("to_file_one_time_upload_endpoint error: {:#?}", e)))
     }
-    pub async fn upload_start(&mut self,
-                              site: &String,
-                              path: &String,
-                              file_name: &String,
-                              data: &[u8]) -> Result<(), SPOError> {
+    //
+    //  Upload Start , Start for upload multiple chunk to Share point online
+    //
+    pub async fn upload_start(
+        &mut self,
+        site: &String,
+        path: &String,
+        file_name: &String,
+        data: &[u8],
+    ) -> Result<(), SPOError> {
         let uuid = Uuid::new_v4();
-        let mut end_point = self.end_point
-            .set_uuid(&uuid.to_string());
+        let mut end_point = self.end_point.set_uuid(&uuid.to_string());
         self.end_point = end_point.clone();
 
         //save empty file first
+        //if not save empty file first, will get error , file not found from share point online
         let empty_data = vec![];
-        let rs = self.upload_one_time(site, path, file_name, empty_data.as_slice()).await;
+        let rs = self
+            .upload_one_time(site, path, file_name, empty_data.as_slice())
+            .await;
         match rs {
             Ok(_) => {
                 debug!("Create empty file success");
@@ -129,11 +147,18 @@ impl SPOEngine {
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
-        ).await.map_err(|e| {
-            SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e))
-        })
+        )
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
-    pub async fn upload_continue(&mut self, data: &[u8], file_offset: &u64) -> Result<(), SPOError> {
+    //
+    //  Upload Continue , Continue for upload multiple chunk to Share point online
+    //
+    pub async fn upload_continue(
+        &mut self,
+        data: &[u8],
+        file_offset: &u64,
+    ) -> Result<(), SPOError> {
         let end_point = self.end_point.set_offset(file_offset);
         self.end_point = end_point.clone();
 
@@ -142,10 +167,13 @@ impl SPOEngine {
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
-        ).await.map_err(|e| {
-            SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e))
-        })
+        )
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
+    //
+    //  Upload  Finish,  Finish for upload multiple chunk to Share point online
+    //
     pub async fn upload_finish(&mut self, data: &[u8], file_offset: &u64) -> Result<(), SPOError> {
         let end_point = self.end_point.set_offset(file_offset);
         self.end_point = end_point.clone();
@@ -155,9 +183,9 @@ impl SPOEngine {
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
-        ).await.map_err(|e| {
-            SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e))
-        })
+        )
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
 }
 

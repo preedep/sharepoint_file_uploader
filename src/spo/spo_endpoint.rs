@@ -53,7 +53,10 @@ impl SPOEndpoint {
         )
     }
     pub fn to_spo_digest_url(&self) -> String {
-        format!("{web_url}/_api/ContextInfo", web_url = self.to_spo_web_url())
+        format!(
+            "{web_url}/_api/ContextInfo",
+            web_url = self.to_spo_web_url()
+        )
     }
     pub fn to_file_one_time_upload_endpoint(&self) -> String {
         format!("{web_url}/_api/web/GetFolderByServerRelativeUrl('{path}')/Files/add(url='{file_name}',overwrite=true)'",
