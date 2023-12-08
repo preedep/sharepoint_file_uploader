@@ -80,7 +80,7 @@ impl SPOEngine {
             &self.client_secret,
             &self.share_point_domain,
         )
-        .await;
+            .await;
         match token {
             Ok(t) => {
                 debug!("token: {:#?}", t);
@@ -94,7 +94,7 @@ impl SPOEngine {
             &self.end_point.to_spo_digest_url(),
             &self.token.clone().unwrap().access_token.unwrap(),
         )
-        .await;
+            .await;
         match context_info {
             Ok(d) => {
                 debug!("context_info: {:#?}", d);
@@ -110,8 +110,8 @@ impl SPOEngine {
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
         )
-        .await
-        .map_err(|e| SPOError::new(&format!("to_file_one_time_upload_endpoint error: {:#?}", e)))
+            .await
+            .map_err(|e| SPOError::new(&format!("to_file_one_time_upload_endpoint error: {:#?}", e)))
     }
     //
     //  Upload Start , Start for upload multiple chunk to Share point online
@@ -148,8 +148,8 @@ impl SPOEngine {
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
         )
-        .await
-        .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
     //
     //  Upload Continue , Continue for upload multiple chunk to Share point online
@@ -168,8 +168,8 @@ impl SPOEngine {
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
         )
-        .await
-        .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
     //
     //  Upload  Finish,  Finish for upload multiple chunk to Share point online
@@ -184,8 +184,8 @@ impl SPOEngine {
             &self.token.clone().unwrap().access_token.unwrap(),
             &String::from_utf8(data.to_vec()).unwrap(),
         )
-        .await
-        .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
+            .await
+            .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
     }
 }
 

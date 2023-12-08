@@ -64,8 +64,7 @@ struct Cli {
     spo_site: String,
     /// Share point domain ex. [share_point_domain].sharepoint.com/sites/[share_point_site]/_api/web/GetFileByServerRelativeUrl('[spo_path]')
     #[arg(long)]
-    spo_path: String
-
+    spo_path: String,
 }
 
 #[tokio::main]
@@ -78,11 +77,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let tenant_id = std::env::var("AZURE_TENANT_ID").unwrap();
     let client_id = std::env::var("AZURE_CLIENT_ID").unwrap();
     let client_secret = std::env::var("AZURE_CLIENT_SECRET").unwrap();
-    let share_point_domain = std::env::var("SHARE_POINT_DOMAIN").unwrap();
 
-    let account = String::from("nickdevstorage002");
-    let container = String::from("datas");
-    let blob_name = String::from("test5.txt");
+
+    let account = cli.storage_account;
+    let container = cli.container_name;
+    let blob_name = cli.blob_name;
+
+
+    let share_point_domain = cli.spo_domain;
+    let share_point_site = cli.spo_site;
+    let share_point_path = cli.spo_path;
+
 
     let sp = SpinnerBuilder::new("Uploading....".into()).start();
     let start = SystemTime::now();
@@ -98,13 +103,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         show_status,
         &sp,
     )
-    .await?;
+        .await?;
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
 
     Ok(())
 }
+
 //
 //  Read file from azure blob storage and upload chunk file to share point online
 //
