@@ -3,6 +3,14 @@ name = "sharepoint_uploader"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "sharepoint_uploader"
+path = "src/main.rs"
+
+[[bin]]
+name = "azfunc_sharepoint_uploader"
+path = "src/main_azfunc.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

@@ -17,6 +17,7 @@ use crate::spo::spo_engine::SPOEngine;
 pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
 mod spo;
+mod main_azfunc;
 
 pub enum ProcessStatus {
     Start,
