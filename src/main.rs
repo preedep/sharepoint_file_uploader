@@ -13,6 +13,7 @@ use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::spo::spo_engine::SPOEngine;
 
+
 pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
 mod spo;
@@ -73,17 +74,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let cli = Cli::parse();
 
-
+    // Common parameters for uses authentication for Storage Account , Share Point Online
+    // Client Secret got from App Registration in Azure Active Directory
     let tenant_id = std::env::var("AZURE_TENANT_ID").unwrap();
     let client_id = std::env::var("AZURE_CLIENT_ID").unwrap();
     let client_secret = std::env::var("AZURE_CLIENT_SECRET").unwrap();
 
-
+    // Parameters for blob storage
     let account = cli.storage_account;
     let container = cli.container_name;
     let blob_name = cli.blob_name;
 
-
+    // Parameters for share point online
     let share_point_domain = cli.spo_domain;
     let share_point_site = cli.spo_site;
     let share_point_path = cli.spo_path;
@@ -97,6 +99,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &client_id,
         &client_secret,
         &share_point_domain,
+        &share_point_site,
+        &share_point_path,
         &account,
         &container,
         &blob_name,
@@ -119,6 +123,8 @@ async fn do_upload_file_to_spo(
     client_id: &String,
     client_secret: &String,
     share_point_domain: &String,
+    share_point_site: &String,
+    share_point_pah : &String,
     account: &String,
     container: &String,
     blob_name: &String,
@@ -168,9 +174,9 @@ async fn do_upload_file_to_spo(
                     callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
                     let r = spo_engine
                         .upload_start(
-                            &String::from("MVP"),
-                            &String::from("/sites/MVP/Shared Documents"),
-                            &String::from(blob_name),
+                            share_point_site,
+                            share_point_pah,
+                            blob_name,
                             result.as_slice(),
                         )
                         .await;
