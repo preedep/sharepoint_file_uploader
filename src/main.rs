@@ -97,6 +97,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &client_id,
         &client_secret,
         &share_point_domain,
+        &share_point_site,
+        &share_point_path,
         &account,
         &container,
         &blob_name,
@@ -119,6 +121,8 @@ async fn do_upload_file_to_spo(
     client_id: &String,
     client_secret: &String,
     share_point_domain: &String,
+    share_point_site: &String,
+    share_point_pah : &String,
     account: &String,
     container: &String,
     blob_name: &String,
@@ -168,9 +172,9 @@ async fn do_upload_file_to_spo(
                     callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
                     let r = spo_engine
                         .upload_start(
-                            &String::from("MVP"),
-                            &String::from("/sites/MVP/Shared Documents"),
-                            &String::from(blob_name),
+                            share_point_site,
+                            share_point_pah,
+                            blob_name,
                             result.as_slice(),
                         )
                         .await;
