@@ -108,7 +108,7 @@ impl SPOEngine {
             &self.end_point.to_file_one_time_upload_endpoint(),
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
-            &String::from_utf8(data.to_vec()).unwrap(),
+            &data.to_vec(),
         )
             .await
             .map_err(|e| SPOError::new(&format!("to_file_one_time_upload_endpoint error: {:#?}", e)))
@@ -146,7 +146,7 @@ impl SPOEngine {
             &self.end_point.to_file_start_upload_endpoint(),
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
-            &String::from_utf8(data.to_vec()).unwrap(),
+            &data.to_vec(),
         )
             .await
             .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
@@ -166,7 +166,7 @@ impl SPOEngine {
             &self.end_point.to_file_continue_upload_endpoint(),
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
-            &String::from_utf8(data.to_vec()).unwrap(),
+            &data.to_vec(),
         )
             .await
             .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
@@ -182,7 +182,7 @@ impl SPOEngine {
             &self.end_point.to_file_finish_upload_endpoint(),
             &self.context_info.clone().unwrap(),
             &self.token.clone().unwrap().access_token.unwrap(),
-            &String::from_utf8(data.to_vec()).unwrap(),
+            &data.to_vec(),
         )
             .await
             .map_err(|e| SPOError::new(&format!("transfer_data_to_spo error: {:#?}", e)))
@@ -228,7 +228,7 @@ async fn transfer_data_to_spo(
     spo_save_endpoint: &String,
     digest: &SPOContextInfoResponse,
     spo_access_token: &String,
-    text: &String,
+    data: &[u8],
 ) -> Result<(), reqwest::Error> {
     debug!("transfer_data_to_spo with url : {:?}", spo_save_endpoint);
 
@@ -242,7 +242,7 @@ async fn transfer_data_to_spo(
         "application/json;odata=verbose".parse().unwrap(),
     );
     headers.append("Accept", "application/json;odata=verbose".parse().unwrap());
-    headers.append("Content-Length", text.len().to_string().parse().unwrap());
+    headers.append("Content-Length", data.len().to_string().parse().unwrap());
     headers.append(
         "X-RequestDigest",
         digest
@@ -255,7 +255,7 @@ async fn transfer_data_to_spo(
     let res = Client::new()
         .post(spo_save_endpoint)
         .headers(headers.clone())
-        .body(text.clone())
+        .body(data.to_owned())
         .send()
         .await;
     match res {

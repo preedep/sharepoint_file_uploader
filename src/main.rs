@@ -247,7 +247,6 @@ async fn do_upload_file_to_spo(
                     panic!("{}", e);
                 }
             }
-
             callback(
                 ProcessStatus::Finish,
                 &spinner,
