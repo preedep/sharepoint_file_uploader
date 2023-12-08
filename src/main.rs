@@ -5,6 +5,7 @@ use std::time::SystemTime;
 use azure_identity::DefaultAzureCredential;
 use azure_storage::StorageCredentials;
 use azure_storage_blobs::prelude::ClientBuilder;
+use clap::Parser;
 use console::Style;
 use futures::StreamExt;
 use log::{debug, info};
@@ -12,7 +13,7 @@ use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::spo::spo_engine::SPOEngine;
 
-pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 100MB
+pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
 mod spo;
 
@@ -43,9 +44,36 @@ fn show_status(status: ProcessStatus, spinner: &SpinnerHandle, message: &String)
     }
 }
 
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Storage account for copy file to share point online
+    #[arg(long)]
+    storage_account: String,
+    /// Container name in storage account for copy file to share point online
+    #[arg(long)]
+    container_name: String,
+    /// Blob name or File name for copy file to share point online
+    #[arg(long)]
+    blob_name: String,
+    /// Share point domain ex. [share_point_domain].sharepoint.com
+    #[arg(long)]
+    spo_domain: String,
+    /// Share point domain ex. [share_point_domain].sharepoint.com/sites/[share_point_site]
+    #[arg(long)]
+    spo_site: String,
+    /// Share point domain ex. [share_point_domain].sharepoint.com/sites/[share_point_site]/_api/web/GetFileByServerRelativeUrl('[spo_path]')
+    #[arg(long)]
+    spo_path: String
+
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     pretty_env_logger::init();
+
+    let cli = Cli::parse();
+
 
     let tenant_id = std::env::var("AZURE_TENANT_ID").unwrap();
     let client_id = std::env::var("AZURE_CLIENT_ID").unwrap();
@@ -77,7 +105,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
+//
+//  Read file from azure blob storage and upload chunk file to share point online
+//
 async fn do_upload_file_to_spo(
     tenant_id: &String,
     client_id: &String,

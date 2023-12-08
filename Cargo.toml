@@ -24,4 +24,5 @@ uuid = { version =  "1.6", default-features = false , features = ["v4","fast-rng
 console = "0.15"
 spinner = "0.5"
 time = "0.3"
+clap = { version = "4.4" ,features = ["derive"]}
 

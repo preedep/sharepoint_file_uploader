@@ -128,6 +128,7 @@ impl SPOEngine {
         self.end_point = end_point.clone();
 
         //save empty file first
+        //if not save empty file first, will get error , file not found from share point online
         let empty_data = vec![];
         let rs = self
             .upload_one_time(site, path, file_name, empty_data.as_slice())
