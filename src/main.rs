@@ -140,6 +140,9 @@ async fn do_upload_file_to_spo(
     let mut spo_engine =
         SPOEngine::new(&tenant_id, &client_id, &client_secret, &share_point_domain);
 
+    //
+    //  Read file from azure blob storage and upload chunk file to share point online
+    //
     let mut stream = blob_client.get().into_stream();
     while let Some(value) = stream.next().await {
         let mut body = value?.data;
@@ -150,6 +153,9 @@ async fn do_upload_file_to_spo(
             //debug!("Value len : {:?}", value.len());
             chunk_buffer_size = chunk_buffer_size + value.len() as u64;
 
+            //
+            //  Check chunk buffer size
+            //
             if chunk_buffer_size < MAX_CHUNK_SIZE as u64 {
                 result.extend(&value);
                 spinner.update(format!("Downloading... {} bytes", chunk_buffer_size));
@@ -160,7 +166,6 @@ async fn do_upload_file_to_spo(
                     debug!("Upload First Chunk");
                     //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
                     callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
-
                     let r = spo_engine
                         .upload_start(
                             &String::from("MVP"),
@@ -172,6 +177,7 @@ async fn do_upload_file_to_spo(
                     match r {
                         Ok(_) => {
                             debug!("Upload Chunk Success");
+                            spinner.update(format!("Updated {} bytes", chunk_buffer_size));
                             //setup flag and resetup
                             has_first_chunk = true;
                             offset = offset + result.len() as u64;
