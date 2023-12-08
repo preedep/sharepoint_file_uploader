@@ -77,10 +77,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
 
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards");
-    info!("Executed complete : {:?} secs", since_the_epoch.as_secs());
+    let diff = SystemTime::now().duration_since(start).unwrap();
+    info!("Executed complete : {:?} secs", diff.as_secs());
 
     Ok(())
 }
