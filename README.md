@@ -19,7 +19,7 @@ m365 spo tenant settings set --DisableCustomAppAuthentication false
 ```
 
 
-**for more configuration, please refer to this [link](https://www.syntera.ch/blog/2022/10/10/copy-files-from-sharepoint-to-blob-storage-using-azure-data-factory/)**_
+**for more configuration, please refer to this [link](https://www.syntera.ch/blog/2022/10/10/copy-files-from-sharepoint-to-blob-storage-using-azure-data-factory/)** (Configuration for Copy file from Share Point to Azure Blob Storage via Azure Data Factory)
 
 
 
