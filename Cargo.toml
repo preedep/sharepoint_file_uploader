@@ -33,4 +33,4 @@ console = "0.15"
 spinner = "0.5"
 time = "0.3"
 clap = { version = "4.4" ,features = ["derive"]}
-
+warp = { version = "0.3", features = ["tokio-rustls"] }
