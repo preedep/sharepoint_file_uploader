@@ -2,6 +2,12 @@
 
 POC (Prove Of Concept) for Upload file from Azure Blob Storage to Share Point Online
 
+**_My POC is using Rust_**, but you can use any language you want, as long as you can get the token from Share Point Online
+In this project have 2 main application interfaces
+- CLI (Command Line Interface)
+- Rest API (For Azure Function)
+
+
 # Prerequisite:
 - Share Point Online
 - Azure Portal

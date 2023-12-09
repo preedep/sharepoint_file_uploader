@@ -21,9 +21,10 @@ struct UploadFileToSPORequest {
     blob_name: String,
 }
 
+
 #[tokio::main]
 async fn main() {
-    let example1 = warp::get()
+    let  blob2spo_endpoint = warp::post()
         .and(warp::path("api"))
         .and(warp::path("HttpTriggerCopyBlob2SPO"))
         .and(warp::query::<HashMap<String, String>>())
@@ -38,5 +39,5 @@ async fn main() {
         Err(_) => 3000,
     };
 
-    warp::serve(example1).run((Ipv4Addr::LOCALHOST, port)).await
+    warp::serve(blob2spo_endpoint).run((Ipv4Addr::LOCALHOST, port)).await
 }

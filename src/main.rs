@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use clap::Parser;
 use console::Style;
 use futures::StreamExt;
-use log::info;
+use log::{error, info};
 use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::blob::blob2spo::{do_copy_file_to_spo, ProcessStatus};
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             info!("Copy file to SPO complete");
         }
         Err(e) => {
-            info!("Copy file to SPO error : {}", e);
+            error!("Copy file to SPO error : {}", e);
         }
     }
 
