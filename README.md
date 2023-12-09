@@ -27,8 +27,8 @@ m365 spo tenant settings set --DisableCustomAppAuthentication false
 
 **for more configuration, please refer to this [link](https://www.syntera.ch/blog/2022/10/10/copy-files-from-sharepoint-to-blob-storage-using-azure-data-factory/)** (Configuration for Copy file from Share Point to Azure Blob Storage via Azure Data Factory)
 
-
-
+# CLI (Command Line Interface) 
+Usage
 ```
 AZURE_TENANT_ID=xxxxxx \
 AZURE_CLIENT_ID=xxxx \
@@ -47,12 +47,15 @@ SHARE_POINT_DOMAIN Get from Share Point Online
 
 # Azure Function 
 For test locally, you can use this command
+
+Usage
 ```
 cargo build
 cp ./target/debug/azfunc_sharepoint_uploader .
 RUST_LOG=debug func start --verbose
 ```
-Curl Test
+
+For test via Rest API, you can use this command
 ```
 curl -v -X POST http://localhost:7071/api/HttpTriggerCopyBlob2SPO -H 'Content-Type: application/json' \
     -d '{
