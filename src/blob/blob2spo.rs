@@ -12,9 +12,6 @@ use crate::spo::spo_engine::{SPOEngine, SPOError};
 
 pub const MAX_CHUNK_SIZE: usize = 32 * 1024 * 1024; // 64MB
 
-
-
-
 pub enum ProcessStatus {
     StartDownload,
     Downloading,
@@ -72,15 +69,13 @@ pub async fn do_copy_file_to_spo(
     //
     let mut stream = blob_client.get().into_stream();
     while let Some(value) = stream.next().await {
-        let mut body = value.map_err(|e|{
-            SPOError::new(&format!("Error: {:?}", e))
-        })?.data;
+        let mut body = value
+            .map_err(|e| SPOError::new(&format!("Error: {:?}", e)))?
+            .data;
         // For each response, we stream the body instead of collecting it all
         // into one large allocation.
         while let Some(value) = body.next().await {
-            let value = value.map_err(|e|{
-                SPOError::new(&format!("Error: {:?}", e))
-            })?;
+            let value = value.map_err(|e| SPOError::new(&format!("Error: {:?}", e)))?;
 
             //debug!("Value len : {:?}", value.len());
             chunk_buffer_size = chunk_buffer_size + value.len() as u64;
