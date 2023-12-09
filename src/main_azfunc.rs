@@ -1,12 +1,12 @@
-use std::collections::HashMap;
 use std::net::Ipv4Addr;
-use log::debug;
 
-use crate::blob::blob2spo::do_copy_file_to_spo;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::{Filter, Rejection};
 use warp::reject::Reject;
+use warp::{Filter, Rejection};
+
+use crate::blob::blob2spo::do_copy_file_to_spo;
 use crate::spo::spo_engine::SPOError;
 
 mod blob;
@@ -25,16 +25,16 @@ struct UploadFileToSPORequest {
     blob_name: String,
 }
 
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct UploadFileToSPOReject {
-    error: SPOError
+    error: SPOError,
 }
+
 impl Reject for UploadFileToSPOReject {}
+
 impl UploadFileToSPOReject {
     fn new(error: SPOError) -> Self {
-        UploadFileToSPOReject {
-            error
-        }
+        UploadFileToSPOReject { error }
     }
 }
 
@@ -60,14 +60,12 @@ async fn copy_file_blob_to_spo(
         None,
         None,
     )
-    .await.map(|r|{
-        warp::reply::json(&json!({}))
-    }).map_err(|e|{
-        warp::reject::custom(UploadFileToSPOReject::new(e))
-    })
+    .await
+    .map(|r| warp::reply::json(&json!({})))
+    .map_err(|e| warp::reject::custom(UploadFileToSPOReject::new(e)))
 }
-fn json_body() -> impl Filter<Extract = (UploadFileToSPORequest,), Error = Rejection> + Clone
-{
+
+fn json_body() -> impl Filter<Extract = (UploadFileToSPORequest,), Error = Rejection> + Clone {
     // When accepting a body, we want a JSON body
     // (and to reject huge payloads)...
     warp::body::content_length_limit(1024 * 16).and(warp::body::json())
@@ -84,11 +82,15 @@ fn log_body() -> impl Filter<Extract = (UploadFileToSPORequest,), Error = Reject
 async fn recover(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
     if let Some(e) = err.find::<UploadFileToSPOReject>() {
         let json = warp::reply::json(&e);
-        Ok(warp::reply::with_status(json, warp::http::StatusCode::INTERNAL_SERVER_ERROR))
+        Ok(warp::reply::with_status(
+            json,
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+        ))
     } else {
         Err(warp::reject::not_found())
     }
 }
+
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
