@@ -1,6 +1,6 @@
 # Share Point File Uploader
 
-POC (Prove Of Concept) for Upload file from Azure Blob Storage to Share Point Online
+POC (Proof Of Concept) for Upload file from Azure Blob Storage to Share Point Online
 
 **_My POC is using Rust_**, but you can use any language you want, as long as you can get the token from Share Point Online
 In this project have 2 main application interfaces
@@ -13,7 +13,7 @@ In this project have 2 main application interfaces
 - Azure Portal
 
 # Azure portal
-- Create New Application Account in App Registerations
+- Create New Application Account in App Registrations
 - Create New Secret Key in your new Application Account
 
 # Share Point Online
@@ -43,3 +43,55 @@ RUST_LOG=debug ./target/debug/sharepoint_uploader --storage-account "xx" \
 AZURE_* Get from Azure App Registration in Azure Portal
 
 SHARE_POINT_DOMAIN Get from Share Point Online
+
+
+# Azure Function 
+For test locally, you can use this command
+```
+cargo build
+cp ./target/debug/azfunc_sharepoint_uploader .
+RUST_LOG=debug func start --verbose
+```
+Curl Test
+```
+curl -v -X POST http://localhost:7071/api/HttpTriggerCopyBlob2SPO -H 'Content-Type: application/json' \
+    -d '{
+          "tenant_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "client_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "client_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "share_point_domain": "1234",
+          "share_point_site": "XX",
+          "share_point_path": "/sites/xxx/yyyyyy",
+          "account": "xxx",
+          "container": "xxx",
+          "blob_name": "xxx.txt"
+         }'
+``` 
+Build for Azure Function (Linux) (for my case I use macOS)
+```
+brew tap SergioBenitez/osxct
+brew install FiloSottile/musl-cross/musl-cross
+```
+
+```
+rustup target add x86_64-unknown-linux-musl
+TARGET_CC=x86_64-linux-musl-gcc \
+RUSTFLAGS="-C linker=x86_64-linux-musl-gcc" \
+cargo build --release --target=x86_64-unknown-linux-musl
+```
+
+Package for Azure Function
+```
+./build_linux.sh
+
+cp ./target/x86_64-unknown-linux-musl/release/azfunc_sharepoint_uploader .
+
+# Pack zip files
+rm -rf deployment.zip
+zip -r deployment.zip azfunc_sharepoint_uploader host.json HttpTriggerCopyBlob2SPO/
+```
+
+Azure CLI to deploy zip file to Azure Function
+```
+az functionapp deployment source config-zip -g <resource_group> -n <app_name> --src deployment.zip
+```
