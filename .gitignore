@@ -7,4 +7,14 @@ run_rel.sh
 /.idea/modules.xml
 /.idea/sharepoint_file_uploader.iml
 /.idea/vcs.xml
-/build_linux.sh
+
+.git*
+.vscode
+__azurite_db*__.json
+__blobstorage__
+__queuestorage__
+test
+/.vscode/extensions.json
+/curl_test.sh
+/azfunc_sharepoint_uploader
+/deployment.zip
