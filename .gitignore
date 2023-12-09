@@ -17,3 +17,4 @@ test
 /.vscode/extensions.json
 /curl_test.sh
 /azfunc_sharepoint_uploader
+/deployment.zip
