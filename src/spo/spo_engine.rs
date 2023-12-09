@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use log::debug;
+use log::{debug, error};
 use oauth2::http::HeaderMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -325,6 +325,7 @@ async fn get_spo_digest_value(
                         return Ok(rj);
                     }
                     Err(e) => {
+                        error!("Error Get Digest Value : {:#?}", e);
                         return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
@@ -339,6 +340,7 @@ async fn get_spo_digest_value(
                         .set_spo_error(rj));
                     }
                     Err(e) => {
+                        error!("Parse Error Get Digest Value failed : {:#?}", e);
                         return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };

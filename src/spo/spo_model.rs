@@ -37,19 +37,19 @@ pub struct D {
 #[serde(rename_all = "camelCase")]
 pub struct GetContextWebInformation {
     #[serde(rename = "__metadata")]
-    pub metadata: Metadata,
+    pub metadata: Option<Metadata>,
     #[serde(rename = "FormDigestTimeoutSeconds")]
-    pub form_digest_timeout_seconds: i64,
+    pub form_digest_timeout_seconds: Option<i64>,
     #[serde(rename = "FormDigestValue")]
     pub form_digest_value: String,
     #[serde(rename = "LibraryVersion")]
-    pub library_version: String,
+    pub library_version: Option<String>,
     #[serde(rename = "SiteFullUrl")]
-    pub site_full_url: String,
+    pub site_full_url: Option<String>,
     #[serde(rename = "SupportedSchemaVersions")]
-    pub supported_schema_versions: SupportedSchemaVersions,
+    pub supported_schema_versions: Option<SupportedSchemaVersions>,
     #[serde(rename = "WebFullUrl")]
-    pub web_full_url: String,
+    pub web_full_url: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
