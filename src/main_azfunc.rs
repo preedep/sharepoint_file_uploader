@@ -1,7 +1,26 @@
 use std::collections::HashMap;
 use std::env;
 use std::net::Ipv4Addr;
-use warp::{http::Response, Filter};
+
+use serde::{Deserialize, Serialize};
+use warp::{Filter, http::Response};
+
+mod blob;
+mod spo;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UploadFileToSPORequest {
+    tenant_id: String,
+    client_id: String,
+    client_secret: String,
+    share_point_domain: String,
+    share_point_site: String,
+    share_point_path: String,
+    account: String,
+    container: String,
+    blob_name: String,
+}
+
 
 #[tokio::main]
 async fn main() {
