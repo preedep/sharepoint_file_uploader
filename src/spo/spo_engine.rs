@@ -305,6 +305,7 @@ async fn get_spo_digest_value(
         format!("Bearer {}", spo_access_token).parse().unwrap(),
     );
     headers.append("Accept", "application/json;odata=verbose".parse().unwrap());
+    headers.append("Content-Length", "0".parse().unwrap());
     headers.append(
         "Content-Type",
         "application/json;odata=verbose".parse().unwrap(),
@@ -344,6 +345,20 @@ async fn get_spo_digest_value(
                         return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
+                /*
+               let text_err = r.text().await;
+                match text_err {
+                     Ok(te) => {
+                          return Err(SPOError::new(&format!(
+                            "Error Get Digest Value : {:#?}",
+                            te
+                          )));
+                     }
+                     Err(e) => {
+                          error!("Parse Error Get Digest Value failed : {:#?}", e);
+                          return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
+                     }
+                };*/
             }
         }
         Err(e) => {
