@@ -3,21 +3,28 @@ use std::fmt::{Display, Formatter};
 use log::debug;
 use oauth2::http::HeaderMap;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::spo::spo_endpoint::SPOEndpoint;
 use crate::spo::spo_model::{SPOContextInfoResponse, SPOErrorResponse, SPOTokenResponse};
 
-#[derive(Debug)]
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct SPOError {
     message: String,
+    spo_error: Option<SPOErrorResponse>,
 }
 
 impl SPOError {
     pub fn new(message: &String) -> SPOError {
         SPOError {
             message: message.clone(),
+            spo_error: None,
         }
+    }
+    pub fn set_spo_error(&mut self, spo_error: SPOErrorResponse) -> SPOError{
+        self.spo_error = Some(spo_error);
+        self.clone()
     }
 }
 
@@ -229,7 +236,7 @@ async fn transfer_data_to_spo(
     digest: &SPOContextInfoResponse,
     spo_access_token: &String,
     data: &[u8],
-) -> Result<(), reqwest::Error> {
+) -> Result<(), SPOError> {
     debug!("transfer_data_to_spo with url : {:?}", spo_save_endpoint);
 
     let mut headers = HeaderMap::new();
@@ -263,13 +270,29 @@ async fn transfer_data_to_spo(
             if r.status().is_success() {
                 debug!("Success Upload");
             } else {
-                let res_json = r.json::<SPOErrorResponse>().await?;
-                //error!("Error: {:#?}", res_json);
-                panic!("Error: {:#?}", res_json);
+                let res_json = r.json::<SPOErrorResponse>().await;
+                match res_json {
+                    Ok(rj) => {
+                        return Err(SPOError::new(&format!(
+                            "Error Upload : {:#?}",
+                            rj.error.message.value
+                        )).set_spo_error(rj));
+                    }
+                    Err(e) => {
+                        return Err(SPOError::new(&format!(
+                            "Error Upload : {:#?}",
+                            e
+                        )));
+                    }
+                };
             }
         }
         Err(e) => {
-            panic!("url : {}\n{}", spo_save_endpoint, e);
+            //panic!("url : {}\n{}", spo_save_endpoint, e);
+            return Err(SPOError::new(&format!(
+                "Error Upload : {:#?}",
+                e
+            )));
         }
     };
     Ok(())
@@ -278,7 +301,7 @@ async fn transfer_data_to_spo(
 async fn get_spo_digest_value(
     spo_digest_endpoint: &String,
     spo_access_token: &String,
-) -> Result<SPOContextInfoResponse, reqwest::Error> {
+) -> Result<SPOContextInfoResponse, SPOError> {
     debug!("spo_digest_endpoint: {:?}", spo_digest_endpoint);
 
     let mut headers = HeaderMap::new();
@@ -292,12 +315,51 @@ async fn get_spo_digest_value(
         "application/json;odata=verbose".parse().unwrap(),
     );
 
-    Client::new()
+    let res = Client::new()
         .post(spo_digest_endpoint)
         .headers(headers.clone())
         .send()
-        .await?
-        .json::<SPOContextInfoResponse>()
-        .await
-        .map_err(|e| e)
+        .await;
+    match res {
+        Ok(r) => {
+            if r.status().is_success() {
+                debug!("Success Get Digest Value");
+                let res_json = r.json::<SPOContextInfoResponse>().await;
+                match res_json {
+                    Ok(rj) => {
+                        return Ok(rj);
+                    }
+                    Err(e) => {
+                        return Err(SPOError::new(&format!(
+                            "Error Get Digest Value : {:#?}",
+                            e
+                        )));
+                    }
+                };
+            } else {
+                let res_json = r.json::<SPOErrorResponse>().await;
+                match res_json {
+                    Ok(rj) => {
+                        return Err(SPOError::new(&format!(
+                            "Error Get Digest Value : {:#?}",
+                            rj.error.message.value
+                        )).set_spo_error(rj));
+                    }
+                    Err(e) => {
+                        return Err(SPOError::new(&format!(
+                            "Error Get Digest Value : {:#?}",
+                            e
+                        )));
+                    }
+                };
+            }
+        }
+        Err(e) => {
+            //panic!("url : {}\n{}", spo_digest_endpoint, e);
+            return Err(SPOError::new(&format!(
+                "Error Get Digest Value : {:#?}",
+                e
+            )));
+        }
+    };
 }

@@ -14,7 +14,7 @@
   },
   "customHandler": {
     "description": {
-      "defaultExecutablePath": "azfunc_sharepoint_uploader",
+      "defaultExecutablePath": "./target/debug/azfunc_sharepoint_uploader",
       "workingDirectory": "",
       "arguments": []
     },
