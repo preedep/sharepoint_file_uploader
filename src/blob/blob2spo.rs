@@ -8,9 +8,12 @@ use futures::StreamExt;
 use log::debug;
 use spinner::SpinnerHandle;
 
-use crate::spo::spo_engine::SPOEngine;
+use crate::spo::spo_engine::{SPOEngine, SPOError};
 
 pub const MAX_CHUNK_SIZE: usize = 32 * 1024 * 1024; // 64MB
+
+
+
 
 pub enum ProcessStatus {
     StartDownload,
@@ -40,7 +43,7 @@ pub async fn do_copy_file_to_spo(
     blob_name: &String,
     callback: Option<ShowStatusFn>,
     spinner: Option<&SpinnerHandle>,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<(), SPOError> {
     let credential = Arc::new(DefaultAzureCredential::default());
     let storage_credentials = StorageCredentials::token_credential(credential);
 
@@ -69,11 +72,16 @@ pub async fn do_copy_file_to_spo(
     //
     let mut stream = blob_client.get().into_stream();
     while let Some(value) = stream.next().await {
-        let mut body = value?.data;
+        let mut body = value.map_err(|e|{
+            SPOError::new(&format!("Error: {:?}", e))
+        })?.data;
         // For each response, we stream the body instead of collecting it all
         // into one large allocation.
         while let Some(value) = body.next().await {
-            let value = value?;
+            let value = value.map_err(|e|{
+                SPOError::new(&format!("Error: {:?}", e))
+            })?;
+
             //debug!("Value len : {:?}", value.len());
             chunk_buffer_size = chunk_buffer_size + value.len() as u64;
             //
@@ -142,8 +150,7 @@ pub async fn do_copy_file_to_spo(
                             result.extend(&value);
                         }
                         Err(e) => {
-                            debug!("Upload Chunk Error: {:?}", e);
-                            panic!("{}", e);
+                            return Err(e);
                         }
                     }
                 } else {
@@ -178,8 +185,7 @@ pub async fn do_copy_file_to_spo(
                             result.extend(&value);
                         }
                         Err(e) => {
-                            debug!("Upload Chunk Error: {:?}", e);
-                            panic!("{}", e);
+                            return Err(e);
                         }
                     }
                 }
@@ -220,8 +226,7 @@ pub async fn do_copy_file_to_spo(
                     }
                 }
                 Err(e) => {
-                    debug!("Upload Chunk Error: {:?}", e);
-                    panic!("{}", e);
+                    return Err(e);
                 }
             }
         } else {
@@ -256,8 +261,7 @@ pub async fn do_copy_file_to_spo(
                     }
                 }
                 Err(e) => {
-                    debug!("Upload Chunk Error: {:?}", e);
-                    panic!("{}", e);
+                    return Err(e);
                 }
             }
         }

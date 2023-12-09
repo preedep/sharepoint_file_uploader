@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let sp = SpinnerBuilder::new("Copy file to SPO".into()).start();
     let start = SystemTime::now();
 
-    do_copy_file_to_spo(
+    let res = do_copy_file_to_spo(
         &tenant_id,
         &client_id,
         &client_secret,
@@ -116,7 +116,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(show_status),
         Some(&sp),
     )
-    .await?;
+    .await;
+    match res {
+        Ok(_) => {
+            info!("Copy file to SPO complete");
+        }
+        Err(e) => {
+            info!("Copy file to SPO error : {}", e);
+        }
+    }
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
