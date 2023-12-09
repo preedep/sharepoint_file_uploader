@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use log::debug;
+use log::{debug, error};
 use oauth2::http::HeaderMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -305,6 +305,7 @@ async fn get_spo_digest_value(
         format!("Bearer {}", spo_access_token).parse().unwrap(),
     );
     headers.append("Accept", "application/json;odata=verbose".parse().unwrap());
+    headers.append("Content-Length", "0".parse().unwrap());
     headers.append(
         "Content-Type",
         "application/json;odata=verbose".parse().unwrap(),
@@ -325,6 +326,7 @@ async fn get_spo_digest_value(
                         return Ok(rj);
                     }
                     Err(e) => {
+                        error!("Error Get Digest Value : {:#?}", e);
                         return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
@@ -339,9 +341,24 @@ async fn get_spo_digest_value(
                         .set_spo_error(rj));
                     }
                     Err(e) => {
+                        error!("Parse Error Get Digest Value failed : {:#?}", e);
                         return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
+                /*
+               let text_err = r.text().await;
+                match text_err {
+                     Ok(te) => {
+                          return Err(SPOError::new(&format!(
+                            "Error Get Digest Value : {:#?}",
+                            te
+                          )));
+                     }
+                     Err(e) => {
+                          error!("Parse Error Get Digest Value failed : {:#?}", e);
+                          return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
+                     }
+                };*/
             }
         }
         Err(e) => {
