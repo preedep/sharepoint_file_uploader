@@ -4,6 +4,7 @@ use std::net::Ipv4Addr;
 
 use crate::blob::blob2spo::do_copy_file_to_spo;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use warp::{ Filter };
 use warp::reject::Reject;
 use crate::spo::spo_engine::SPOError;
@@ -54,9 +55,9 @@ async fn copy_file_blob_to_spo(
         None,
     )
     .await.map(|r|{
-        warp::reply::json(&r)
+        warp::reply::json(&json!({}))
     }).map_err(|e|{
-        warp::reject::custom(crate::UploadFileToSPOReject::new(e))
+        warp::reject::custom(UploadFileToSPOReject::new(e))
     })
 }
 fn json_body() -> impl Filter<Extract = (UploadFileToSPORequest,), Error = warp::Rejection> + Clone
