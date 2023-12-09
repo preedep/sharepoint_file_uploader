@@ -21,17 +21,23 @@ struct UploadFileToSPORequest {
     blob_name: String,
 }
 
+async fn copy_file_blob_to_spo(req: UploadFileToSPORequest) -> Result<impl warp::Reply, warp::Rejection> {
+    Ok(warp::reply::json(&req))
+}
+fn json_body() -> impl Filter<Extract = (UploadFileToSPORequest,), Error = warp::Rejection> + Clone {
+    // When accepting a body, we want a JSON body
+    // (and to reject huge payloads)...
+    warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+}
 
 #[tokio::main]
 async fn main() {
     let  blob2spo_endpoint = warp::post()
         .and(warp::path("api"))
         .and(warp::path("HttpTriggerCopyBlob2SPO"))
-        .and(warp::query::<HashMap<String, String>>())
-        .map(|p: HashMap<String, String>| match p.get("name") {
-            Some(name) => Response::builder().body(format!("Hello, {}. This HTTP triggered function executed successfully.", name)),
-            None => Response::builder().body(String::from("This HTTP triggered function executed successfully. Pass a name in the query string for a personalized response.")),
-        });
+        .and(warp::path::end())
+        .and(json_body())
+        .and_then(copy_file_blob_to_spo);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
