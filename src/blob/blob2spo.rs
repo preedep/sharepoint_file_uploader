@@ -10,7 +10,7 @@ use spinner::SpinnerHandle;
 
 use crate::spo::spo_engine::{SPOEngine, SPOError};
 
-pub const MAX_CHUNK_SIZE: usize = 32 * 1024 * 1024; // 64MB
+pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
 pub enum ProcessStatus {
     StartDownload,
