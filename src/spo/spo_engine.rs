@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::spo::spo_endpoint::SPOEndpoint;
 use crate::spo::spo_model::{SPOContextInfoResponse, SPOErrorResponse, SPOTokenResponse};
 
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SPOError {
     message: String,
     spo_error: Option<SPOErrorResponse>,
@@ -22,7 +22,7 @@ impl SPOError {
             spo_error: None,
         }
     }
-    pub fn set_spo_error(&mut self, spo_error: SPOErrorResponse) -> SPOError{
+    pub fn set_spo_error(&mut self, spo_error: SPOErrorResponse) -> SPOError {
         self.spo_error = Some(spo_error);
         self.clone()
     }
@@ -276,23 +276,18 @@ async fn transfer_data_to_spo(
                         return Err(SPOError::new(&format!(
                             "Error Upload : {:#?}",
                             rj.error.message.value
-                        )).set_spo_error(rj));
+                        ))
+                            .set_spo_error(rj));
                     }
                     Err(e) => {
-                        return Err(SPOError::new(&format!(
-                            "Error Upload : {:#?}",
-                            e
-                        )));
+                        return Err(SPOError::new(&format!("Error Upload : {:#?}", e)));
                     }
                 };
             }
         }
         Err(e) => {
             //panic!("url : {}\n{}", spo_save_endpoint, e);
-            return Err(SPOError::new(&format!(
-                "Error Upload : {:#?}",
-                e
-            )));
+            return Err(SPOError::new(&format!("Error Upload : {:#?}", e)));
         }
     };
     Ok(())
@@ -330,10 +325,7 @@ async fn get_spo_digest_value(
                         return Ok(rj);
                     }
                     Err(e) => {
-                        return Err(SPOError::new(&format!(
-                            "Error Get Digest Value : {:#?}",
-                            e
-                        )));
+                        return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
             } else {
@@ -343,23 +335,18 @@ async fn get_spo_digest_value(
                         return Err(SPOError::new(&format!(
                             "Error Get Digest Value : {:#?}",
                             rj.error.message.value
-                        )).set_spo_error(rj));
+                        ))
+                            .set_spo_error(rj));
                     }
                     Err(e) => {
-                        return Err(SPOError::new(&format!(
-                            "Error Get Digest Value : {:#?}",
-                            e
-                        )));
+                        return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
                     }
                 };
             }
         }
         Err(e) => {
             //panic!("url : {}\n{}", spo_digest_endpoint, e);
-            return Err(SPOError::new(&format!(
-                "Error Get Digest Value : {:#?}",
-                e
-            )));
+            return Err(SPOError::new(&format!("Error Get Digest Value : {:#?}", e)));
         }
     };
 }

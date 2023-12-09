@@ -13,11 +13,10 @@ use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::spo::spo_engine::SPOEngine;
 
-
 pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
 
-mod spo;
 mod main_azfunc;
+mod spo;
 
 pub enum ProcessStatus {
     Start,
@@ -91,7 +90,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let share_point_site = cli.spo_site;
     let share_point_path = cli.spo_path;
 
-
     let sp = SpinnerBuilder::new("Uploading....".into()).start();
     let start = SystemTime::now();
 
@@ -108,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         show_status,
         &sp,
     )
-        .await?;
+    .await?;
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
@@ -125,7 +123,7 @@ async fn do_upload_file_to_spo(
     client_secret: &String,
     share_point_domain: &String,
     share_point_site: &String,
-    share_point_pah : &String,
+    share_point_pah: &String,
     account: &String,
     container: &String,
     blob_name: &String,
