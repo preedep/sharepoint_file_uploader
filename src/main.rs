@@ -1,46 +1,56 @@
 use std::error::Error;
-use std::sync::Arc;
 use std::time::SystemTime;
 
-use azure_identity::DefaultAzureCredential;
-use azure_storage::StorageCredentials;
-use azure_storage_blobs::prelude::ClientBuilder;
 use clap::Parser;
 use console::Style;
 use futures::StreamExt;
-use log::{debug, info};
+use log::{error, info};
 use spinner::{SpinnerBuilder, SpinnerHandle};
 
-use crate::spo::spo_engine::SPOEngine;
+use crate::blob::blob2spo::{do_copy_file_to_spo, ProcessStatus};
 
-
-pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
-
+mod blob;
 mod spo;
 
-pub enum ProcessStatus {
-    Start,
-    Continue,
-    Finish,
-}
-
-pub type ShowStatusFn = fn(status: ProcessStatus, spinner: &SpinnerHandle, message: &String);
-
-fn show_status(status: ProcessStatus, spinner: &SpinnerHandle, message: &String) {
+fn show_status(
+    status: ProcessStatus,
+    spinner: &SpinnerHandle,
+    message: &String,
+    chunks_size: &u64,
+) {
     let cyan = Style::new().cyan().bold();
 
     match status {
-        ProcessStatus::Start => {
-            info!("Start[{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+        ProcessStatus::StartDownload => {
+            //info!("Start download blob file [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+            //spinner.update("".to_string());
         }
-        ProcessStatus::Continue => {
-            info!("Continue[{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+        ProcessStatus::Downloading => {
+            //info!("Start copy file to share point online [{}]", cyan.apply_to(message));
+            let message = format!("{} with {} bytes", message, chunks_size);
+            spinner.update(cyan.apply_to(message).to_string());
         }
-        ProcessStatus::Finish => {
-            info!("Finish[{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+        ProcessStatus::DownloadComplete => {
+            //info!("Download complete [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+        }
+        ProcessStatus::StartUpload => {
+            //info!("Start upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+        }
+        ProcessStatus::ContinueUpload => {
+            //info!("Continue upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+        }
+        ProcessStatus::FinishUpload => {
+            //info!("Finish upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+        }
+        ProcessStatus::UploadComplete => {
+            //info!("Upload done [{}]", cyan.apply_to(message));
+            //let message = format!("{} with {} bytes", message, chunks_size);
+            spinner.message(message.clone().into());
         }
     }
 }
@@ -90,11 +100,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let share_point_site = cli.spo_site;
     let share_point_path = cli.spo_path;
 
-
-    let sp = SpinnerBuilder::new("Uploading....".into()).start();
+    let sp = SpinnerBuilder::new("Copy file to SPO".into()).start();
     let start = SystemTime::now();
 
-    do_upload_file_to_spo(
+    let res = do_copy_file_to_spo(
         &tenant_id,
         &client_id,
         &client_secret,
@@ -104,180 +113,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &account,
         &container,
         &blob_name,
-        show_status,
-        &sp,
+        Some(show_status),
+        Some(&sp),
     )
-        .await?;
+    .await;
+    match res {
+        Ok(_) => {
+            info!("Copy file to SPO complete");
+        }
+        Err(e) => {
+            error!("Copy file to SPO error : {}", e);
+        }
+    }
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
-
-    Ok(())
-}
-
-//
-//  Read file from azure blob storage and upload chunk file to share point online
-//
-async fn do_upload_file_to_spo(
-    tenant_id: &String,
-    client_id: &String,
-    client_secret: &String,
-    share_point_domain: &String,
-    share_point_site: &String,
-    share_point_pah : &String,
-    account: &String,
-    container: &String,
-    blob_name: &String,
-    callback: ShowStatusFn,
-    spinner: &SpinnerHandle,
-) -> Result<(), Box<dyn Error>> {
-    let credential = Arc::new(DefaultAzureCredential::default());
-    let storage_credentials = StorageCredentials::token_credential(credential);
-
-    let blob_client =
-        ClientBuilder::new(account, storage_credentials).blob_client(container, blob_name);
-
-    let mut result: Vec<u8> = vec![];
-    // The stream is composed of individual calls to the get blob endpoint
-    let mut chunk_buffer_size: u64 = 0;
-    let mut offset: u64 = 0;
-    let mut has_first_chunk = false;
-
-    let mut spo_engine =
-        SPOEngine::new(&tenant_id, &client_id, &client_secret, &share_point_domain);
-
-    //
-    //  Read file from azure blob storage and upload chunk file to share point online
-    //
-    let mut stream = blob_client.get().into_stream();
-    while let Some(value) = stream.next().await {
-        let mut body = value?.data;
-        // For each response, we stream the body instead of collecting it all
-        // into one large allocation.
-        while let Some(value) = body.next().await {
-            let value = value?;
-            //debug!("Value len : {:?}", value.len());
-            chunk_buffer_size = chunk_buffer_size + value.len() as u64;
-
-            //
-            //  Check chunk buffer size
-            //
-            if chunk_buffer_size < MAX_CHUNK_SIZE as u64 {
-                result.extend(&value);
-                spinner.update(format!("Downloading... {} bytes", chunk_buffer_size));
-            } else {
-                debug!("Next Chunk");
-                //upload for previous chunk
-                if !has_first_chunk {
-                    debug!("Upload First Chunk");
-                    //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
-                    callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
-                    let r = spo_engine
-                        .upload_start(
-                            share_point_site,
-                            share_point_pah,
-                            blob_name,
-                            result.as_slice(),
-                        )
-                        .await;
-                    match r {
-                        Ok(_) => {
-                            debug!("Upload Chunk Success");
-                            spinner.update(format!("Updated {} bytes", chunk_buffer_size));
-                            //setup flag and resetup
-                            has_first_chunk = true;
-                            offset = offset + result.len() as u64;
-                            chunk_buffer_size = value.len() as u64; //reset
-                            result = vec![];
-                            result.extend(&value);
-                        }
-                        Err(e) => {
-                            debug!("Upload Chunk Error: {:?}", e);
-                            panic!("{}", e);
-                        }
-                    }
-                } else {
-                    //has first chunk already
-                    //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
-                    callback(
-                        ProcessStatus::Continue,
-                        &spinner,
-                        &String::from("Upload Continue"),
-                    );
-
-                    let r = spo_engine.upload_continue(result.as_slice(), &offset).await;
-                    match r {
-                        Ok(_) => {
-                            //debug!("continue upload end point url: {:?}", end_point_url);
-                            debug!("Upload Chunk Success");
-                            offset = offset + result.len() as u64;
-                            result = vec![];
-                            chunk_buffer_size = value.len() as u64; //reset
-                            result.extend(&value);
-                        }
-                        Err(e) => {
-                            debug!("Upload Chunk Error: {:?}", e);
-                            panic!("{}", e);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if result.len() > 0 {
-        if !has_first_chunk {
-            //simple upload
-            //small file
-            callback(
-                ProcessStatus::Start,
-                &spinner,
-                &String::from("Upload Start"),
-            );
-            debug!("Upload First Chunk");
-
-            let r = spo_engine
-                .upload_one_time(
-                    &String::from("MVP"),
-                    &String::from("/sites/MVP/Shared Documents"),
-                    &String::from(blob_name),
-                    result.as_slice(),
-                )
-                .await;
-
-            match r {
-                Ok(_) => {
-                    debug!("Upload Chunk Success");
-                }
-                Err(e) => {
-                    debug!("Upload Chunk Error: {:?}", e);
-                    panic!("{}", e);
-                }
-            }
-            callback(
-                ProcessStatus::Finish,
-                &spinner,
-                &String::from("Upload Finish"),
-            );
-        } else {
-            debug!("Upload finish Chunk");
-            //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
-            callback(
-                ProcessStatus::Finish,
-                &spinner,
-                &String::from("Upload Finish"),
-            );
-            let r = spo_engine.upload_finish(result.as_slice(), &offset).await;
-            match r {
-                Ok(_) => {
-                    debug!("Upload Chunk Success");
-                }
-                Err(e) => {
-                    debug!("Upload Chunk Error: {:?}", e);
-                    panic!("{}", e);
-                }
-            }
-        }
-    }
 
     Ok(())
 }
