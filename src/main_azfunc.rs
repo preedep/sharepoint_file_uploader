@@ -3,7 +3,7 @@ use std::env;
 use std::net::Ipv4Addr;
 
 use serde::{Deserialize, Serialize};
-use warp::{Filter, http::Response};
+use warp::{http::Response, Filter};
 
 mod blob;
 mod spo;
@@ -20,7 +20,6 @@ struct UploadFileToSPORequest {
     container: String,
     blob_name: String,
 }
-
 
 #[tokio::main]
 async fn main() {

@@ -9,40 +9,48 @@ use spinner::{SpinnerBuilder, SpinnerHandle};
 
 use crate::blob::blob2spo::{do_copy_file_to_spo, ProcessStatus};
 
-mod spo;
 mod blob;
+mod spo;
 
-
-fn show_status(status: ProcessStatus,
-               spinner: &SpinnerHandle,
-               message: &String,
-               chunks_size: &u64) {
+fn show_status(
+    status: ProcessStatus,
+    spinner: &SpinnerHandle,
+    message: &String,
+    chunks_size: &u64,
+) {
     let cyan = Style::new().cyan().bold();
 
     match status {
         ProcessStatus::StartDownload => {
-            info!("Start download blob file [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Start download blob file [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
+            //spinner.update("".to_string());
+        }
+        ProcessStatus::Downloading => {
+            //info!("Start copy file to share point online [{}]", cyan.apply_to(message));
+            let message = format!("{} with {} bytes", message, chunks_size);
+            spinner.update(cyan.apply_to(message).to_string());
         }
         ProcessStatus::DownloadComplete => {
-            info!("Download complete [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Download complete [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
         }
         ProcessStatus::StartUpload => {
-            info!("Start upload file to share point online [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Start upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
         }
         ProcessStatus::ContinueUpload => {
-            info!("Continue upload file to share point online [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Continue upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
         }
         ProcessStatus::FinishUpload => {
-            info!("Finish upload file to share point online [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Finish upload file to share point online [{}]", cyan.apply_to(message));
+            spinner.message(message.clone().into());
         }
         ProcessStatus::UploadComplete => {
-            info!("Upload done [{}]", cyan.apply_to(message));
-            spinner.update(message.clone().into());
+            //info!("Upload done [{}]", cyan.apply_to(message));
+            //let message = format!("{} with {} bytes", message, chunks_size);
+            spinner.message(message.clone().into());
         }
     }
 }
@@ -92,7 +100,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let share_point_site = cli.spo_site;
     let share_point_path = cli.spo_path;
 
-    let sp = SpinnerBuilder::new("Uploading....".into()).start();
+    let sp = SpinnerBuilder::new("Copy file to SPO".into()).start();
     let start = SystemTime::now();
 
     do_copy_file_to_spo(
@@ -108,11 +116,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Some(show_status),
         Some(&sp),
     )
-        .await?;
+    .await?;
 
     let diff = SystemTime::now().duration_since(start).unwrap();
     info!("Executed complete : {:?} secs", diff.as_secs());
 
     Ok(())
 }
-

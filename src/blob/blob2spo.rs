@@ -10,11 +10,11 @@ use spinner::SpinnerHandle;
 
 use crate::spo::spo_engine::SPOEngine;
 
-pub const MAX_CHUNK_SIZE: usize = 64 * 1024 * 1024; // 64MB
-
+pub const MAX_CHUNK_SIZE: usize = 32 * 1024 * 1024; // 64MB
 
 pub enum ProcessStatus {
     StartDownload,
+    Downloading,
     DownloadComplete,
     StartUpload,
     ContinueUpload,
@@ -22,11 +22,8 @@ pub enum ProcessStatus {
     UploadComplete,
 }
 
-
-pub type ShowStatusFn = fn(status: ProcessStatus,
-                           spinner: &SpinnerHandle,
-                           message: &String,
-                           chunks_size: &u64);
+pub type ShowStatusFn =
+    fn(status: ProcessStatus, spinner: &SpinnerHandle, message: &String, chunks_size: &u64);
 
 //
 //  Read file from azure blob storage and upload chunk file to share point online
@@ -59,6 +56,14 @@ pub async fn do_copy_file_to_spo(
     let mut spo_engine =
         SPOEngine::new(&tenant_id, &client_id, &client_secret, &share_point_domain);
 
+    if let Some(callback) = callback {
+        callback(
+            ProcessStatus::StartDownload,
+            spinner.unwrap(),
+            &String::from("Downloading"),
+            &chunk_buffer_size,
+        );
+    }
     //
     //  Read file from azure blob storage and upload chunk file to share point online
     //
@@ -78,17 +83,23 @@ pub async fn do_copy_file_to_spo(
                 result.extend(&value);
                 //spinner.update(format!("Downloading... {} bytes", chunk_buffer_size));
                 if let Some(callback) = callback {
-                    callback(ProcessStatus::StartDownload,
-                             spinner.unwrap(),
-                             &String::from("Downloading"), &chunk_buffer_size);
+                    callback(
+                        ProcessStatus::Downloading,
+                        spinner.unwrap(),
+                        &String::from("Downloading"),
+                        &chunk_buffer_size,
+                    );
                 }
             } else {
                 debug!("Next Chunk");
                 //Download completed
                 if let Some(callback) = callback {
-                    callback(ProcessStatus::DownloadComplete,
-                             spinner.unwrap(),
-                             &String::from("Download Complete"), &chunk_buffer_size);
+                    callback(
+                        ProcessStatus::DownloadComplete,
+                        spinner.unwrap(),
+                        &String::from("Download Complete"),
+                        &chunk_buffer_size,
+                    );
                 }
                 //upload for previous chunk
                 if !has_first_chunk {
@@ -96,9 +107,12 @@ pub async fn do_copy_file_to_spo(
                     //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
                     //callback(ProcessStatus::Start, spinner, &String::from("Upload Start"));
                     if let Some(callback) = callback {
-                        callback(ProcessStatus::StartUpload,
-                                 spinner.unwrap(),
-                                 &String::from("Upload Start"), &chunk_buffer_size);
+                        callback(
+                            ProcessStatus::StartUpload,
+                            spinner.unwrap(),
+                            &String::from("Upload Start"),
+                            &chunk_buffer_size,
+                        );
                     }
                     let r = spo_engine
                         .upload_start(
@@ -112,9 +126,12 @@ pub async fn do_copy_file_to_spo(
                         Ok(_) => {
                             debug!("Upload Chunk Success");
                             if let Some(callback) = callback {
-                                callback(ProcessStatus::UploadComplete,
-                                         spinner.unwrap(),
-                                         &String::from("Upload Finish"), &chunk_buffer_size);
+                                callback(
+                                    ProcessStatus::UploadComplete,
+                                    spinner.unwrap(),
+                                    &String::from("Upload Complete[StartUpload]"),
+                                    &chunk_buffer_size,
+                                );
                             }
                             //spinner.update(format!("Updated {} bytes", chunk_buffer_size));
                             //setup flag and resetup
@@ -131,16 +148,14 @@ pub async fn do_copy_file_to_spo(
                     }
                 } else {
                     //has first chunk already
-                    //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
-                    //callback(
-                    //    ProcessStatus::Continue,
-                    //    &spinner,
-                    //    &String::from("Upload Continue"),
-                    //);
+
                     if let Some(callback) = callback {
-                        callback(ProcessStatus::ContinueUpload,
-                                 spinner.unwrap(),
-                                 &String::from("Upload Continue"), &chunk_buffer_size);
+                        callback(
+                            ProcessStatus::ContinueUpload,
+                            spinner.unwrap(),
+                            &String::from("Upload Continue"),
+                            &chunk_buffer_size,
+                        );
                     }
 
                     let r = spo_engine.upload_continue(result.as_slice(), &offset).await;
@@ -149,9 +164,12 @@ pub async fn do_copy_file_to_spo(
                             //debug!("continue upload end point url: {:?}", end_point_url);
                             debug!("Upload Chunk Success");
                             if let Some(callback) = callback {
-                                callback(ProcessStatus::UploadComplete,
-                                         spinner.unwrap(),
-                                         &String::from("Upload Finish"), &chunk_buffer_size);
+                                callback(
+                                    ProcessStatus::UploadComplete,
+                                    spinner.unwrap(),
+                                    &String::from("Upload Complete[ContinueUpload]"),
+                                    &chunk_buffer_size,
+                                );
                             }
 
                             offset = offset + result.len() as u64;
@@ -171,17 +189,14 @@ pub async fn do_copy_file_to_spo(
     if result.len() > 0 {
         if !has_first_chunk {
             //simple upload
-            //small file
-            //callback(
-            //    ProcessStatus::Start,
-            //    &spinner,
-            //    &String::from("Upload Start"),
-            //);
             debug!("Upload First Chunk");
             if let Some(callback) = callback {
-                callback(ProcessStatus::StartUpload,
-                         spinner.unwrap(),
-                         &String::from("Upload Start"), &chunk_buffer_size);
+                callback(
+                    ProcessStatus::StartUpload,
+                    spinner.unwrap(),
+                    &String::from("Upload Start"),
+                    &chunk_buffer_size,
+                );
             }
             let r = spo_engine
                 .upload_one_time(
@@ -196,9 +211,12 @@ pub async fn do_copy_file_to_spo(
                 Ok(_) => {
                     debug!("Upload Chunk Success");
                     if let Some(callback) = callback {
-                        callback(ProcessStatus::UploadComplete,
-                                 spinner.unwrap(),
-                                 &String::from("Upload Finish"), &chunk_buffer_size);
+                        callback(
+                            ProcessStatus::UploadComplete,
+                            spinner.unwrap(),
+                            &String::from("Upload Complete"),
+                            &chunk_buffer_size,
+                        );
                     }
                 }
                 Err(e) => {
@@ -206,32 +224,35 @@ pub async fn do_copy_file_to_spo(
                     panic!("{}", e);
                 }
             }
-            //callback(
-            //    ProcessStatus::Finish,
-            //    &spinner,
-            //    &String::from("Upload Finish"),
-            //);
         } else {
             debug!("Upload finish Chunk");
-            //spinner.update(format!("Downloaded... {} bytes", chunk_buffer_size));
-            //callback(
-            //    ProcessStatus::Finish,
-            //    &spinner,
-            //    &String::from("Upload Finish"),
-            //);
+
             if let Some(callback) = callback {
-                callback(ProcessStatus::DownloadComplete,
-                         spinner.unwrap(),
-                         &String::from("Download Complete"), &chunk_buffer_size);
+                callback(
+                    ProcessStatus::DownloadComplete,
+                    spinner.unwrap(),
+                    &String::from("Download Complete"),
+                    &chunk_buffer_size,
+                );
+
+                callback(
+                    ProcessStatus::FinishUpload,
+                    spinner.unwrap(),
+                    &String::from("Upload Finish"),
+                    &chunk_buffer_size,
+                );
             }
             let r = spo_engine.upload_finish(result.as_slice(), &offset).await;
             match r {
                 Ok(_) => {
                     debug!("Upload Finish Chunk Success");
                     if let Some(callback) = callback {
-                        callback(ProcessStatus::UploadComplete,
-                                 spinner.unwrap(),
-                                 &String::from("Upload Finish"), &chunk_buffer_size);
+                        callback(
+                            ProcessStatus::UploadComplete,
+                            spinner.unwrap(),
+                            &String::from("Upload Complete[FinishUpload]"),
+                            &chunk_buffer_size,
+                        );
                     }
                 }
                 Err(e) => {
@@ -241,6 +262,5 @@ pub async fn do_copy_file_to_spo(
             }
         }
     }
-
     Ok(())
 }
